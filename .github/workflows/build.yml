@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Create Cordova Project & Inject CORS Bypass
+        run: |
+          # إنشاء مشروع أندرويد
+          cordova create app dz.chibani.ai "Chibani AI"
+          
+          # استبدال الواجهة الافتراضية بملفك
+          cp video.html app/www/index.html
+          
+          cd app
+          cordova platform add android
+          
+          # إدراج أوامر كسر حماية المتصفح (CORS) ليعمل الـ API مباشرة
+          sed -i 's|</widget>|    <preference name="AndroidInsecureFileModeEnabled" value="true" />\n    <allow-navigation href="*" />\n    <access origin="*" />\n</widget>|' config.xml
+          
+          # بناء التطبيق
+          cordova build android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chibani-AI-V12-ULTRA-APK
+          path: app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
